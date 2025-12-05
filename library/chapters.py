@@ -4,6 +4,7 @@ TrainerCentral Chapters (Sections) API Wrapper.
 
 import os
 import requests
+from utils.user_oauth import get_user_org_info
 from .oauth import ZohoOAuth
 
 
@@ -11,11 +12,21 @@ class TrainerCentralChapters:
     """
     Provides helper functions to interact with TrainerCentral's
     chapter (section) APIs.
+    
+    NOTE: This class now uses per-user org info fetched from portals API.
+    The ORG_ID and DOMAIN are retrieved dynamically from the user session
+    instead of being hardcoded environment variables.
     """
 
     def __init__(self):
-        self.ORG_ID = os.getenv("ORG_ID")
-        self.DOMAIN = os.getenv("DOMAIN")
+        # Get org info from user session (stored during OAuth flow)
+        org_info = get_user_org_info()
+        self.ORG_ID = org_info.get("org_id") or os.getenv("ORG_ID")
+        self.DOMAIN = org_info.get("domain") or os.getenv("DOMAIN")
+        
+        if not self.ORG_ID or not self.DOMAIN:
+            raise ValueError("ORG_ID and DOMAIN must be configured via user OAuth flow or environment variables")
+        
         self.base_url = f"{self.DOMAIN}/api/v4/{self.ORG_ID}"
         self.oauth = ZohoOAuth()
 

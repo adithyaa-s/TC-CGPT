@@ -14,6 +14,9 @@ _TOKEN_STORE: Dict[str, Dict[str, Any]] = {}
 # auth_code -> { tokens, expires_at }
 _AUTH_CODE_STORE: Dict[str, Dict[str, Any]] = {}
 
+# User org info (org_id, domain) - fetched from portals API
+_USER_ORG_INFO: Dict[str, Any] = {"org_id": None, "domain": None}
+
 
 def store_tokens(session_id: str, tokens: dict) -> None:
     _TOKEN_STORE[session_id] = tokens
@@ -25,6 +28,30 @@ def get_tokens(session_id: str) -> Optional[dict]:
 
 def clear_tokens(session_id: str) -> None:
     _TOKEN_STORE.pop(session_id, None)
+
+
+def store_user_org_info(org_id: str, domain: str) -> None:
+    """Store user's org ID and domain fetched from portals API.
+    
+    NOTE: This is a global store for MVP. In production, associate
+    org info with the user session or account.
+    
+    Args:
+        org_id: Organization ID from portals.json response
+        domain: TrainerCentral domain (e.g., https://testingtrainercentral.trainercentral.in)
+    """
+    global _USER_ORG_INFO
+    _USER_ORG_INFO["org_id"] = org_id
+    _USER_ORG_INFO["domain"] = domain
+
+
+def get_user_org_info() -> Dict[str, Any]:
+    """Get stored org ID and domain.
+    
+    Returns:
+        dict with keys 'org_id' and 'domain'
+    """
+    return _USER_ORG_INFO.copy()
 
 
 def create_auth_code(tokens: dict, expires_in: int = 60) -> str:

@@ -6,13 +6,55 @@ import uuid
 import json
 import urllib.parse
 
-from utils.user_oauth import store_tokens, get_tokens
+from utils.user_oauth import store_tokens, get_tokens, store_user_org_info, get_user_org_info
 
 router = APIRouter()
 
 
 def _is_chatgpt_callback(uri: str) -> bool:
     return uri.startswith("https://chat.openai.com/aip/")
+
+
+def _fetch_user_org_info(access_token: str) -> dict:
+    """Fetch user's org ID and domain from TrainerCentral portals API.
+    
+    Args:
+        access_token: Valid Zoho access token
+        
+    Returns:
+        dict with 'org_id' and 'domain' keys
+        
+    Raises:
+        HTTPException if portals API call fails
+    """
+    # NOTE: TC_DOMAIN can be configured via environment variable.
+    # Default is the test environment.
+    domain = os.getenv("TC_DOMAIN", "https://myacademy.trainercentral.in")
+
+    portals_url = f"{domain}/api/v4/org/portals.json"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        resp = requests.get(portals_url, headers=headers, timeout=10)
+        resp.raise_for_status()
+        portals_data = resp.json()
+    except requests.RequestException as e:
+        print(f"Error fetching portals API: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch org info from portals API: {str(e)}")
+    
+    # Extract org ID from portals response
+    # Expected structure: { "portals": [{ "id": "<org_id>", ... }, ...] }
+    try:
+        org_id = portals_data["portals"][0]["id"]
+    except (KeyError, IndexError, TypeError) as e:
+        print(f"Error parsing portals response: {portals_data}")
+        raise HTTPException(status_code=500, detail=f"Invalid portals API response format: {str(e)}")
+    
+    return {"org_id": org_id, "domain": domain}
+
 
 
 @router.get("/auth/login")
@@ -60,6 +102,8 @@ async def auth_callback(request: Request, response: Response, code: str | None =
 
     Flow:
     - Exchange Zoho `code` for access/refresh tokens.
+    - Fetch user's org ID from TrainerCentral portals API.
+    - Store org info for later use by API endpoints.
     - Create a one-time auth code that ChatGPT (CustomGPT) can exchange.
     - If the incoming `state` contains a `chat_redirect`, redirect user to it
       with query `code=<auth_code>&state=<chat_state>`.
@@ -95,11 +139,19 @@ async def auth_callback(request: Request, response: Response, code: str | None =
     if "access_token" not in result:
         raise HTTPException(status_code=500, detail={"token_error": result})
 
+    # Fetch user's org info from portals API and store it
+    access_token = result.get("access_token")
+    org_info = _fetch_user_org_info(access_token)
+    store_user_org_info(org_info["org_id"], org_info["domain"])
+
     # In direct ChatGPT flow the provider will redirect directly to ChatGPT
     # (we don't need to create an intermediate auth code). Return a simple
     # page indicating success — ChatGPT will receive the provider code and
     # continue the flow by calling your `/auth/token`.
-    return JSONResponse({"message": "Provider callback received; tokens exchanged on token endpoint"})
+    return JSONResponse({
+        "message": "Provider callback received; tokens exchanged on token endpoint",
+        "org_id": org_info["org_id"]
+    })
 
 
 @router.post("/auth/token")
@@ -148,6 +200,11 @@ async def token_exchange(grant_type: str = Form(...), code: str = Form(None), re
     if "access_token" not in result:
         raise HTTPException(status_code=400, detail={"token_error": result})
 
+    # Fetch user's org info from portals API and store it
+    access_token = result.get("access_token")
+    org_info = _fetch_user_org_info(access_token)
+    store_user_org_info(org_info["org_id"], org_info["domain"])
+
     return {
         "access_token": result.get("access_token"),
         "refresh_token": result.get("refresh_token"),
@@ -172,3 +229,22 @@ async def session_tokens(request: Request):
         raise HTTPException(status_code=404, detail="No tokens for session")
 
     return {"session_id": session_id, "tokens": tokens}
+
+
+@router.get("/auth/org-info")
+async def get_org_info():
+    """Return the current user's org ID and domain (fetched from portals API).
+    
+    This endpoint is called by ChatGPT after user logs in to get their
+    organization context needed for API calls.
+    
+    Returns:
+        dict with 'org_id' and 'domain' keys
+    """
+    org_info = get_user_org_info()
+    if not org_info.get("org_id"):
+        raise HTTPException(
+            status_code=401,
+            detail="No org info available. User may not be authenticated or portals API call failed."
+        )
+    return org_info
