@@ -5,7 +5,6 @@ from typing import Optional, Any
 from library.courses import TrainerCentralCourses
 
 router = APIRouter(prefix="/courses", tags=["courses"])
-tc = TrainerCentralCourses()
 
 
 class CourseCreateRequest(BaseModel):
@@ -32,6 +31,7 @@ async def create_course(body: CourseCreateRequest):
 
     Returns the TrainerCentral create course response.
     """
+    tc = TrainerCentralCourses()
     return tc.post_course(body.dict())
 
 
@@ -41,6 +41,7 @@ async def get_course(course_id: str):
 
     GET /courses/{course_id}
     """
+    tc = TrainerCentralCourses()
     return tc.get_course(course_id)
 
 
@@ -50,6 +51,7 @@ async def list_courses():
 
     GET /courses/
     """
+    tc = TrainerCentralCourses()
     return tc.list_courses()
 
 
@@ -59,6 +61,7 @@ async def update_course(course_id: str, body: CourseUpdateRequest):
 
     PUT /courses/{course_id}
     """
+    tc = TrainerCentralCourses()
     return tc.update_course(course_id, body.dict(exclude_unset=True))
 
 
@@ -68,4 +71,5 @@ async def delete_course(course_id: str):
 
     DELETE /courses/{course_id}
     """
+    tc = TrainerCentralCourses()
     return tc.delete_course(course_id)

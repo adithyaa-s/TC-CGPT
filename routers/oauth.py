@@ -211,6 +211,8 @@ async def token_exchange(grant_type: str = Form(...), code: str = Form(None), re
         "expires_in": int(result.get("expires_in", 3600)),
         "token_type": result.get("token_type", "Bearer"),
         "scope": result.get("scope"),
+        "org_id": org_info.get("org_id"),
+        "domain": org_info.get("domain"),
     }
 
 

@@ -5,7 +5,6 @@ from typing import Optional
 from library.assignments import TrainerCentralAssignments
 
 router = APIRouter(prefix="/assignments", tags=["assignments"])
-tc = TrainerCentralAssignments()
 
 
 class AssignmentCreateRequest(BaseModel):
@@ -23,6 +22,7 @@ async def create_assignment(body: AssignmentCreateRequest):
     Body: { assignment_data, instruction_html, instruction_filename, view_type }
     Returns: { assignment, instructions }
     """
+    tc = TrainerCentralAssignments()
     return tc.create_assignment_with_instructions(
         body.assignment_data,
         body.instruction_html,
@@ -37,4 +37,5 @@ async def delete_assignment(session_id: str):
 
     DELETE /assignments/{session_id}
     """
+    tc = TrainerCentralAssignments()
     return tc.delete_assignment(session_id)

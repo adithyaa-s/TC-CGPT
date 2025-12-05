@@ -5,7 +5,6 @@ from typing import Any, Optional
 from library.lessons import TrainerCentralLessons
 
 router = APIRouter(prefix="/lessons", tags=["lessons"])
-tc = TrainerCentralLessons()
 
 
 class LessonCreateRequest(BaseModel):
@@ -26,6 +25,7 @@ async def create_lesson(body: LessonCreateRequest):
     Body: { session_data, content_html, content_filename }
     Returns: { "lesson": {...}, "content": {...} }
     """
+    tc = TrainerCentralLessons()
     return tc.create_lesson_with_content(body.session_data, body.content_html, body.content_filename)
 
 
@@ -36,6 +36,7 @@ async def update_lesson(session_id: str, body: LessonUpdateRequest):
     PUT /lessons/{session_id}
     Body: { updates }
     """
+    tc = TrainerCentralLessons()
     return tc.update_lesson(session_id, body.updates)
 
 
@@ -45,4 +46,5 @@ async def delete_lesson(session_id: str):
 
     DELETE /lessons/{session_id}
     """
+    tc = TrainerCentralLessons()
     return tc.delete_lesson(session_id)

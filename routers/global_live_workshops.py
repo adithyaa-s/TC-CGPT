@@ -6,8 +6,6 @@ from utils.date_converter import DateConverter
 from library.live_workshops import TrainerCentralLiveWorkshops
 
 router = APIRouter(prefix="/global_workshops", tags=["global_live_workshops"])
-tc = TrainerCentralLiveWorkshops()
-dc = DateConverter()
 
 
 class CreateGlobalWorkshopRequest(BaseModel):
@@ -34,6 +32,7 @@ async def create_global_workshop(body: CreateGlobalWorkshopRequest):
     POST /global_workshops/create
     """
     # convert dates to ms and pass into library method that expects ms
+    dc = DateConverter()
     start_ms = int(dc.convert_date_to_time(body.start_time))
     end_ms = int(dc.convert_date_to_time(body.end_time))
 
@@ -50,6 +49,7 @@ async def create_global_workshop(body: CreateGlobalWorkshopRequest):
         },
     }
 
+    tc = TrainerCentralLiveWorkshops()
     return tc.create_global_workshop(
         name=body.name,
         description_html=body.description_html,
@@ -66,6 +66,7 @@ async def update_workshop(session_id: str, updates: Dict[str, Any]):
 
     PUT /global_workshops/{session_id}
     """
+    tc = TrainerCentralLiveWorkshops()
     return tc.update_workshop(session_id, updates)
 
 
@@ -75,6 +76,7 @@ async def create_occurrence(body: CreateOccurrenceRequest):
 
     POST /global_workshops/occurrence
     """
+    dc = DateConverter()
     scheduled_ms = int(dc.convert_date_to_time(body.scheduledTime))
     scheduled_end_ms = int(dc.convert_date_to_time(body.scheduledEndTime))
 
@@ -88,6 +90,7 @@ async def create_occurrence(body: CreateOccurrenceRequest):
     if body.recurrence is not None:
         talk_data["recurrence"] = body.recurrence
 
+    tc = TrainerCentralLiveWorkshops()
     return tc.create_occurrence(talk_data)
 
 
@@ -97,6 +100,7 @@ async def update_occurrence(talk_id: str, updates: Dict[str, Any]):
 
     PUT /global_workshops/occurrence/{talk_id}
     """
+    tc = TrainerCentralLiveWorkshops()
     return tc.update_occurrence(talk_id, updates)
 
 
@@ -106,6 +110,7 @@ async def list_global_workshops(filter_type: int = 5, limit: int = 50, si: int =
 
     GET /global_workshops?filter_type=&limit=&si=
     """
+    tc = TrainerCentralLiveWorkshops()
     return tc.list_all_upcoming_workshops(filter_type, limit, si)
 
 
@@ -115,4 +120,5 @@ async def invite_user(session_id: str, email: str, role: int = 3, source: int = 
 
     POST /global_workshops/{session_id}/invite
     """
+    tc = TrainerCentralLiveWorkshops()
     return tc.invite_user_to_workshop(session_id, email, role, source)

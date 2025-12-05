@@ -6,8 +6,6 @@ from utils.date_converter import DateConverter
 from library.course_live_workshops import TrainerCentralLiveWorkshops
 
 router = APIRouter(prefix="/course", tags=["course_live_workshops"])
-tc = TrainerCentralLiveWorkshops()
-dc = DateConverter()
 
 
 class CreateCourseLiveRequest(BaseModel):
@@ -39,6 +37,7 @@ async def create_course_live_session(course_id: str, body: CreateCourseLiveReque
     """
     # library currently accepts date strings and converts internally,
     # but we accept the LLM-friendly format and pass it through.
+    tc = TrainerCentralLiveWorkshops()
     return tc.create_course_live_workshop(
         course_id=course_id,
         name=body.name,
@@ -56,6 +55,7 @@ async def list_course_live_sessions(course_id: str, filter_type: int = 5, limit:
 
     GET /course/{course_id}/live_sessions
     """
+    tc = TrainerCentralLiveWorkshops()
     return tc.list_upcoming_live_sessions(filter_type, limit, si)
 
 
@@ -65,6 +65,7 @@ async def delete_course_live_session(session_id: str):
 
     DELETE /course/live_sessions/{session_id}
     """
+    tc = TrainerCentralLiveWorkshops()
     return tc.delete_live_session(session_id)
 
 
@@ -74,6 +75,7 @@ async def invite_learner(body: InviteLearnerRequest):
 
     POST /course/invite_learner
     """
+    tc = TrainerCentralLiveWorkshops()
     return tc.invite_learner_to_course_or_course_live_session(
         email=body.email,
         first_name=body.first_name,

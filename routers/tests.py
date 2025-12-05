@@ -5,7 +5,6 @@ from typing import Dict, Any, Optional
 from library.tests import TrainerCentralTests
 
 router = APIRouter(prefix="/tests", tags=["tests"])
-tc = TrainerCentralTests()
 
 
 class FullTestCreateRequest(BaseModel):
@@ -33,6 +32,7 @@ async def create_full_test(body: FullTestCreateRequest):
 
     POST /tests/create_full
     """
+    tc = TrainerCentralTests()
     return tc.create_full_test(body.session_id, body.name, body.description_html, body.questions)
 
 
@@ -42,6 +42,7 @@ async def create_test_form(body: TestFormCreateRequest):
 
     POST /tests/create_form
     """
+    tc = TrainerCentralTests()
     return tc.create_test_form(body.session_id, body.name, body.description_html)
 
 
@@ -52,6 +53,7 @@ async def add_test_questions(body: AddQuestionsRequest):
     POST /tests/add_questions
     Body: { session_id, form_id_value, questions }
     """
+    tc = TrainerCentralTests()
     return tc.add_questions(body.session_id, body.form_id_value, body.questions)
 
 
@@ -61,4 +63,5 @@ async def get_course_sessions(course_id: str):
 
     GET /tests/course/{course_id}/sessions
     """
+    tc = TrainerCentralTests()
     return tc.get_course_sessions(course_id)
