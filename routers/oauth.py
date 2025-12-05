@@ -21,7 +21,7 @@ async def auth_login():
         raise HTTPException(status_code=500, detail="CLIENT_ID not configured")
 
     redirect_uri = os.getenv("OAUTH_REDIRECT_URI", "http://localhost:8000/auth/callback")
-    scope = os.getenv("OAUTH_SCOPE", "ZohoCRM.modules.ALL")
+    scope = os.getenv("OAUTH_SCOPE", "TrainerCentral.sessionapi.ALL,TrainerCentral.sectionapi.ALL,TrainerCentral.courseapi.ALL,TrainerCentral.userapi.ALL,TrainerCentral.talkapi.ALL")
 
     params = {
         "scope": scope,
