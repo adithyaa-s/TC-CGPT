@@ -38,7 +38,7 @@ def store_user_org_info(org_id: str, domain: str) -> None:
     
     Args:
         org_id: Organization ID from portals.json response
-        domain: TrainerCentral domain (e.g., https://testingtrainercentral.trainercentral.in)
+        domain: TrainerCentral domain (e.g., https://myacademy.trainercentral.in)
     """
     global _USER_ORG_INFO
     _USER_ORG_INFO["org_id"] = org_id

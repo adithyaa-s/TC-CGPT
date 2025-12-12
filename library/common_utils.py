@@ -2,32 +2,18 @@
 
 import os
 import requests
-from utils.oauth import ZohoOAuth
-from utils.user_oauth import get_user_org_info
 from datetime import datetime
 
 class TrainerCentralCommon:
     """
     Shared helper for common TrainerCentral API operations.
     Provides base URL, OAuth token, and generic delete functionality.
-    
-    NOTE: This class now uses per-user org info fetched from portals API.
-    The ORG_ID and DOMAIN are retrieved dynamically from the user session
-    instead of being hardcoded environment variables.
     """
     def __init__(self):
-        # Get org info from user session (stored during OAuth flow)
-        org_info = get_user_org_info()
-        self.ORG_ID = org_info.get("org_id") or os.getenv("ORG_ID")
-        self.DOMAIN = org_info.get("domain") or os.getenv("DOMAIN")
-        
-        if not self.ORG_ID or not self.DOMAIN:
-            raise ValueError("ORG_ID and DOMAIN must be configured via user OAuth flow or environment variables")
-        
-        self.base_url = f"{self.DOMAIN}/api/v4/{self.ORG_ID}"
-        self.oauth = ZohoOAuth()
+        self.DOMAIN = os.getenv("DOMAIN")
+        self.base_url = f"{self.DOMAIN}/api/v4"
 
-    def delete_resource(self, resource: str, resource_id: str) -> dict:
+    def delete_resource(self, resource: str, resource_id: str, orgId: str, access_token: str) -> dict:
         """
         Delete a generic resource.
 
@@ -38,9 +24,9 @@ class TrainerCentralCommon:
         Returns:
             dict: API response JSON.
         """
-        request_url = f"{self.base_url}/{resource}/{resource_id}.json"
+        request_url = f"{self.base_url}/{orgId}/{resource}/{resource_id}.json"
         headers = {
-            "Authorization": f"Bearer {self.oauth.get_access_token()}"
+            "Authorization": f"Bearer {access_token}"
         }
         response = requests.delete(request_url, headers=headers)
         return response.json()

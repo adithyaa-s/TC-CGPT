@@ -1,17 +1,11 @@
 import os
 import requests
-from utils.oauth import ZohoOAuth
-from utils.user_oauth import get_user_org_info
 from .common_utils import DateConverter
 
 
 class TrainerCentralLiveWorkshops:
     """
     TrainerCentral LIVE WORKSHOPS inside a course.
-
-    NOTE: This class now uses per-user org info fetched from portals API.
-    The ORG_ID and DOMAIN are retrieved dynamically from the user session
-    instead of being hardcoded environment variables.
 
     IMPORTANT FOR MCP / AI MODELS:
     ----------------------------------------------------------
@@ -29,29 +23,21 @@ class TrainerCentralLiveWorkshops:
     """
 
     def __init__(self):
-        # Get org info from user session (stored during OAuth flow)
-        org_info = get_user_org_info()
-        self.ORG_ID = org_info.get("org_id") or os.getenv("ORG_ID")
         self.DOMAIN = org_info.get("domain") or os.getenv("DOMAIN")
-        
-        if not self.ORG_ID or not self.DOMAIN:
-            raise ValueError("ORG_ID and DOMAIN must be configured via user OAuth flow or environment variables")
-        
-        self.base_url = f"{self.DOMAIN}/api/v4/{self.ORG_ID}"
-        self.oauth = ZohoOAuth()
+        self.base_url = f"{self.DOMAIN}/api/v4"
         self.date_converter = DateConverter()
 
 
 
     def create_course_live_workshop(
         self,
+        orgId: str, 
+        access_token: str,
         course_id: str,
         name: str,
         description_html: str,
         start_time_str: str,
         end_time_str: str,
-        timezone: str,
-        max_attendees: int = 0
     ):
         """
         Create a LIVE WORKSHOP inside a course.
@@ -71,8 +57,6 @@ class TrainerCentralLiveWorkshops:
             description_html (str)
             start_time_str (str): "DD-MM-YYYY HH:MMAM/PM"
             end_time_str   (str): "DD-MM-YYYY HH:MMAM/PM"
-            timezone (str): Example: "Asia/Kolkata"
-            max_attendees (int)
 
         Returns:
             dict: API response containing the newly created workshop.
@@ -82,7 +66,7 @@ class TrainerCentralLiveWorkshops:
         start_ms = int(self.date_converter.convert_date_to_time(start_time_str))
         end_ms = int(self.date_converter.convert_date_to_time(end_time_str))
 
-        url = f"{self.base_url}/sessions.json"
+        url = f"{self.base_url}/{orgId}/sessions.json"
         headers = {
             "Authorization": f"Bearer {self.oauth.get_access_token()}",
             "Content-Type": "application/json",
@@ -93,29 +77,26 @@ class TrainerCentralLiveWorkshops:
                 "name": name,
                 "description": description_html,
                 "courseId": course_id,
-                "deliveryMode": 6,                
-                "maxParticipants": max_attendees,
-                "schedule": {
-                    "startTime": start_ms,
-                    "endTime": end_ms,
-                    "timeZone": timezone
-                }
+                "deliveryMode": 3,    
+                "scheduledTime": start_ms,
+                "scheduledEndTime": end_ms,
+                "durationTime": end_ms - start_ms,
             }
         }
 
         return requests.post(url, json=body, headers=headers).json()
 
 
-    def list_upcoming_live_sessions(self, filter_type=5, limit=50, si=0):
-        url = f"{self.base_url}/upcomingSessions.json"
+    def list_upcoming_live_sessions(self, course_id: str, orgId: str, access_token: str, filter_type=5, limit=50, si=0):
+        url = f"{self.base_url}/{orgId}/upcomingSessions.json"
         headers = {"Authorization": f"Bearer {self.oauth.get_access_token()}"}
         params = {"filterType": filter_type, "limit": limit, "si": si}
 
         return requests.get(url, params=params, headers=headers).json()
 
 
-    def delete_live_session(self, session_id: str):
-        url = f"{self.base_url}/sessions/{session_id}.json"
+    def delete_live_session(self, session_id: str, orgId: str, access_token: str):
+        url = f"{self.base_url}/{orgId}/sessions/{session_id}.json"
         headers = {"Authorization": f"Bearer {self.oauth.get_access_token()}"}
 
         return requests.delete(url, headers=headers).json()
@@ -124,6 +105,8 @@ class TrainerCentralLiveWorkshops:
     def invite_learner_to_course_or_course_live_session(
     self,
     email: str,
+    orgId: str, 
+    access_token: str,
     first_name: str,
     last_name: str,
     course_id: str = None,
@@ -150,10 +133,10 @@ class TrainerCentralLiveWorkshops:
         if not course_id and not session_id:
             raise ValueError("You must provide either course_id or session_id.")
 
-        url = f"{self.base_url}/addCourseAttendee.json"
+        url = f"{self.base_url}/{orgId}/addCourseAttendee.json"
 
         headers = {
-            "Authorization": f"Bearer {self.oauth.get_access_token()}",
+            "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json"
         }
 

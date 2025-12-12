@@ -1,17 +1,11 @@
 import os
 import requests
-from utils.oauth import ZohoOAuth
-from utils.user_oauth import get_user_org_info
 
 
 class TrainerCentralLiveWorkshops:
     """
     Handles GLOBAL Live Workshops (deliveryMode = 3).
     These are NOT associated with any course.
-
-    NOTE: This class now uses per-user org info fetched from portals API.
-    The ORG_ID and DOMAIN are retrieved dynamically from the user session
-    instead of being hardcoded environment variables.
 
     API References:
       Create Workshop:
@@ -31,16 +25,8 @@ class TrainerCentralLiveWorkshops:
     """
 
     def __init__(self):
-        # Get org info from user session (stored during OAuth flow)
-        org_info = get_user_org_info()
-        self.ORG_ID = org_info.get("org_id") or os.getenv("ORG_ID")
-        self.DOMAIN = org_info.get("domain") or os.getenv("DOMAIN")
-        
-        if not self.ORG_ID or not self.DOMAIN:
-            raise ValueError("ORG_ID and DOMAIN must be configured via user OAuth flow or environment variables")
-        
-        self.base_url = f"{self.DOMAIN}/api/v4/{self.ORG_ID}"
-        self.oauth = ZohoOAuth()
+        self.DOMAIN = os.getenv("DOMAIN")
+        self.base_url = f"{self.DOMAIN}/api/v4"
 
 
     def create_global_workshop(
@@ -49,8 +35,8 @@ class TrainerCentralLiveWorkshops:
         description_html: str,
         start_time_str: str,
         end_time_str: str,
-        timezone: str,
-        max_attendees: int = 0
+        orgId: str, 
+        access_token: str
     ) -> dict:
         """
         Create a GLOBAL live workshop.
@@ -58,7 +44,7 @@ class TrainerCentralLiveWorkshops:
         API:
             POST /api/v4/<orgId>/sessions.json
 
-        deliveryMode = 6  → live workshop (global)
+        deliveryMode = 3 → live workshop (global)
 
         Args (LLM REQUIRED FORMAT):
             start_time_str: "DD-MM-YYYY HH:MMAM/PM"
@@ -71,9 +57,9 @@ class TrainerCentralLiveWorkshops:
         start_ms = int(self.date_converter.convert_date_to_time(start_time_str))
         end_ms = int(self.date_converter.convert_date_to_time(end_time_str))
 
-        url = f"{self.base_url}/sessions.json"
+        url = f"{self.base_url}/{orgId}/sessions.json"
         headers = {
-            "Authorization": f"Bearer {self.oauth.get_access_token()}",
+            "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
         }
 
@@ -81,13 +67,10 @@ class TrainerCentralLiveWorkshops:
             "session": {
                 "name": name,
                 "description": description_html,
-                "deliveryMode": 6,
-                "maxParticipants": max_attendees,
-                "schedule": {
-                    "startTime": start_ms,
-                    "endTime": end_ms,
-                    "timeZone": timezone
-                }
+                "deliveryMode": 3,                
+                "scheduledTime": start_ms,
+                "scheduledEndTime": end_ms,
+                "durationTime": end_ms - start_ms,
             }
         }
 
@@ -95,7 +78,7 @@ class TrainerCentralLiveWorkshops:
 
 
 
-    def update_workshop(self, session_id: str, updates: dict) -> dict:
+    def update_workshop(self, session_id: str, updates: dict, orgId: str, access_token: str) -> dict:
         """
         Update an existing global live workshop.
 
@@ -114,17 +97,17 @@ class TrainerCentralLiveWorkshops:
             dict: API response
         """
 
-        url = f"{self.base_url}/sessions/{session_id}.json"
+        url = f"{self.base_url}/{orgId}/sessions/{session_id}.json"
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.oauth.get_access_token()}"
+            "Authorization": f"Bearer {access_token}"
         }
 
         payload = {"session": updates}
         return requests.put(url, json=payload, headers=headers).json()
 
 
-    def create_occurrence(self, talk_data: dict) -> dict:
+    def create_occurrence(self, talk_data: dict, orgId: str, access_token: str) -> dict:
         """
         Create an occurrence (talk) for a workshop.
 
@@ -141,17 +124,17 @@ class TrainerCentralLiveWorkshops:
         Returns:
             dict: API response
         """
-        url = f"{self.base_url}/talks.json"
+        url = f"{self.base_url}/{orgId}/talks.json"
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.oauth.get_access_token()}"
+            "Authorization": f"Bearer {access_token}"
         }
 
         payload = {"talk": talk_data}
         return requests.post(url, json=payload, headers=headers).json()
 
 
-    def update_occurrence(self, talk_id: str, updates: dict) -> dict:
+    def update_occurrence(self, talk_id: str, updates: dict, orgId: str, access_token: str) -> dict:
         """
         Update or cancel a workshop occurrence.
 
@@ -169,16 +152,16 @@ class TrainerCentralLiveWorkshops:
             dict
         """
 
-        url = f"{self.base_url}/talks/{talk_id}.json"
+        url = f"{self.base_url}/{orgId}/talks/{talk_id}.json"
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.oauth.get_access_token()}"
+            "Authorization": f"Bearer {access_token}"
         }
 
         payload = {"talk": updates}
         return requests.put(url, json=payload, headers=headers).json()
 
-    def list_all_upcoming_workshops(self, filter_type: int = 5, limit: int = 50, si: int = 0) -> dict:
+    def list_all_upcoming_workshops(self, orgId: str, access_token: str, filter_type: int = 5, limit: int = 50, si: int = 0) -> dict:
         """
         Fetch all upcoming global live workshops.
         Uses: GET /talks.json?filter=&limit=&si=
@@ -191,13 +174,13 @@ class TrainerCentralLiveWorkshops:
         Returns:
             dict: API response with sessions list.
         """
-        url = f"{self.base_url}/talks.json?filter={filter_type}&limit={limit}&si={si}"
+        url = f"{self.base_url}/{orgId}/talks.json?filter={filter_type}&limit={limit}&si={si}"
         headers = {
-            "Authorization": f"Bearer {self.oauth.get_access_token()}"
+            "Authorization": f"Bearer {access_token}"
         }
         return requests.get(url, headers=headers).json()
 
-    def invite_user_to_workshop(self, session_id: str, email: str, role: int = 3, source: int = 1) -> dict:
+    def invite_user_to_workshop(self, session_id: str, email: str, orgId: str, access_token: str, role: int = 3, source: int = 1) -> dict:
         """
         Invite / add a member (by email) to a course-linked live workshop / session.
 
@@ -210,10 +193,10 @@ class TrainerCentralLiveWorkshops:
         Returns:
             dict: API response JSON.
         """
-        url = f"{self.base_url}/sessionMembers.json"
+        url = f"{self.base_url}/{orgId}/sessionMembers.json"
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.oauth.get_access_token()}"
+            "Authorization": f"Bearer {access_token}"
         }
         body = {
             "sessionMembers": [

@@ -4,33 +4,19 @@ TrainerCentral Chapters (Sections) API Wrapper.
 
 import os
 import requests
-from utils.user_oauth import get_user_org_info
-from .oauth import ZohoOAuth
 
 
 class TrainerCentralChapters:
     """
     Provides helper functions to interact with TrainerCentral's
     chapter (section) APIs.
-    
-    NOTE: This class now uses per-user org info fetched from portals API.
-    The ORG_ID and DOMAIN are retrieved dynamically from the user session
-    instead of being hardcoded environment variables.
     """
 
     def __init__(self):
-        # Get org info from user session (stored during OAuth flow)
-        org_info = get_user_org_info()
-        self.ORG_ID = org_info.get("org_id") or os.getenv("ORG_ID")
-        self.DOMAIN = org_info.get("domain") or os.getenv("DOMAIN")
-        
-        if not self.ORG_ID or not self.DOMAIN:
-            raise ValueError("ORG_ID and DOMAIN must be configured via user OAuth flow or environment variables")
-        
-        self.base_url = f"{self.DOMAIN}/api/v4/{self.ORG_ID}"
-        self.oauth = ZohoOAuth()
+        self.DOMAIN = os.getenv("DOMAIN")
+        self.base_url = f"{self.DOMAIN}/api/v4"
 
-    def create_chapter(self, section_data: dict):
+    def create_chapter(self, section_data: dict, orgId: str, access_token: str):
         """
         Create a chapter under a course.
 
@@ -38,6 +24,8 @@ class TrainerCentralChapters:
         - Method: POST
         - Endpoint: /api/v4/<orgId>/sections.json
         - OAuth Scope: TrainerCentral.sectionapi.CREATE
+
+        Note: Provide orgId and access token of the user, after OAuth, as parameters.  
 
         Body:
         {
@@ -57,16 +45,16 @@ class TrainerCentralChapters:
         Returns:
             dict: API response containing the created section.
         """
-        request_url = f"{self.base_url}/sections.json"
+        request_url = f"{self.base_url}/{orgId}/sections.json"
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.oauth.get_access_token()}",
+            "Authorization": f"Bearer {access_token}"
         }
         data = {"section": section_data}
 
         return requests.post(request_url, json=data, headers=headers).json()
 
-    def update_chapter(self, course_id: str, section_id: str, updates: dict):
+    def update_chapter(self, course_id: str, section_id: str, updates: dict, orgId: str, access_token: str):
         """
         Edit a chapter name or reorder a chapter inside a course.
 
@@ -84,26 +72,30 @@ class TrainerCentralChapters:
             }
         }
 
+        Note: Provide orgId and access token of the user, after OAuth, as parameters.      
+
         Args:
             course_id (str): ID of the course that owns the chapter.
             section_id (str): ID of the chapter (section).
             updates (dict): fields to update.
+            orgId (str): Organization ID of the user
+            access_token (str): Access Token of the user
 
         Returns:
             dict: API response containing the updated section.
         """
         request_url = (
-            f"{self.base_url}/course/{course_id}/sections/{section_id}.json"
+            f"{self.base_url}/{orgId}/course/{course_id}/sections/{section_id}.json"
         )
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.oauth.get_access_token()}",
+            "Authorization": f"Bearer {access_token}"
         }
         data = {"section": updates}
 
         return requests.put(request_url, json=data, headers=headers).json()
 
-    def delete_chapter(self, course_id: str, section_id: str):
+    def delete_chapter(self, course_id: str, section_id: str, orgId: str, access_token: str):
         """
         Delete a chapter from a course.
 
@@ -113,18 +105,22 @@ class TrainerCentralChapters:
           /api/v4/<orgId>/course/<courseId>/sections/<sectionId>.json
         - OAuth Scope: TrainerCentral.sectionapi.DELETE
 
+        Note: Provide orgId and access token of the user, after OAuth, as parameters.  
+
         Args:
             course_id (str): ID of the course.
             section_id (str): ID of the chapter (section).
+            orgId (str): Organization ID of the user
+            access_token (str): Access Token of the user
 
         Returns:
             dict: Response JSON from the delete call.
         """
         request_url = (
-            f"{self.base_url}/course/{course_id}/sections/{section_id}.json"
+            f"{self.base_url}/{orgId}/course/{course_id}/sections/{section_id}.json"
         )
         headers = {
-            "Authorization": f"Bearer {self.oauth.get_access_token()}",
+            "Authorization": f"Bearer {access_token}"
         }
 
         return requests.delete(request_url, headers=headers).json()
