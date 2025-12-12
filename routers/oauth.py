@@ -19,7 +19,6 @@ async def get_endpoints():
         "issuer": "https://tc-cgpt.onrender.com",
         "authorization_endpoint": "https://accounts.zoho.in/oauth/v2/auth",
         "token_endpoint": "https://accounts.zoho.in/oauth/v2/token",
-        "registration_endpoint": "https://accounts.zoho.in/oauth/v2/register",
         "code_challenge_methods_supported": ["S256"],
         "scopes_supported": ["TrainerCentral.sessionapi.ALL","TrainerCentral.sectionapi.ALL","TrainerCentral.courseapi.ALL","TrainerCentral.userapi.ALL","TrainerCentral.talkapi.ALL","TrainerCentral.portalapi.READ"]
     }
@@ -31,7 +30,6 @@ async def get_endpoints():
         "issuer": "https://tc-cgpt.onrender.com",
         "authorization_endpoint": "https://accounts.zoho.in/oauth/v2/auth",
         "token_endpoint": "https://accounts.zoho.in/oauth/v2/token",
-        "registration_endpoint": "https://accounts.zoho.in/oauth/v2/register",
         "code_challenge_methods_supported": ["S256"],
         "scopes_supported": ["TrainerCentral.sessionapi.ALL","TrainerCentral.sectionapi.ALL","TrainerCentral.courseapi.ALL","TrainerCentral.userapi.ALL","TrainerCentral.talkapi.ALL","TrainerCentral.portalapi.READ"]
     }
